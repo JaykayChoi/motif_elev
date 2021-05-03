@@ -227,7 +227,7 @@ cd _build
 cmake ..
 ```
 
-완료되면 Motif.sin 을 Visual stuio 에서 열어주시면 됩니다.
+완료되면 motif_elev.sin 을 Visual stuio 에서 열어주시면 됩니다.
 
 [1]: https://www.visualstudio.com/downloads/
 [2]: https://cmake.org/download/
