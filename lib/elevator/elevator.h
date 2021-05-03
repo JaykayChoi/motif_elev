@@ -8,28 +8,15 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <functional>
+
+// TODO rename
+typedef std::function<void(
+	int /* id */,
+	int /* boardingFloor */,
+	int /* destinationFloor */)> passenger_call_cb;
 
 namespace elev {
-
-// 승객 요청
-struct Passenger
-{
-	int id;	// 승객 id.
-	int boardingFloor;	// 탑층층.
-	int destinationFloor;	// 목적층.
-
-	// 등장 시간. 
-	// Simulator의 tickCount 가 appearanceTickCount 보다 큰 경우에만 
-	// 해당 승객 요청이 유효하다.
-	int appearanceTickCount;	
-
-	Passenger()
-		: id(0)
-		, boardingFloor(0)
-		, destinationFloor(0)
-		, appearanceTickCount(0)
-	{};
-};
 
 enum class ElevatorState
 {
@@ -63,7 +50,7 @@ enum class ElevatorEvent
 struct Elevator
 {
 	int floor;	// 현재 위치한 층.
-	std::vector<Passenger> passengers;	// 탑승하고 있는 승객들.
+	std::vector<int> passengerIds;	// 탑승하고 있는 승객들 id.
 	ElevatorState state;	// 엘리베이터 상태.
 
 	Elevator(int defaultFloor)
@@ -75,21 +62,15 @@ struct Elevator
 class ElevatorSimulator
 {
 public:
-	
 	ElevatorSimulator(
 		int numElevators, 
 		int maxPassengersPerElevator, 
 		int minFloor, 
 		int maxFloor,
-		int numPassengers);
+		int numPassengers,
+		passenger_call_cb passengerCallCallback);
 
 	~ElevatorSimulator();
-
-	// 전체 승객 반환.
-	ELEV_EXPORT const Passenger* GetTotalPassengers();
-
-	// 처리되지 않은 승객 반환.
-	ELEV_EXPORT const std::map<int, Passenger>& GetRemainingPassengers();
 
 	// Elevator 반환.
 	ELEV_EXPORT const Elevator* GetElevator(int elevatorIndex);
@@ -118,11 +99,26 @@ public:
 	// 현재 tick count 반환.
 	ELEV_EXPORT int TickCount() { return tickCount_; }
 
+	// 승객 요청이 모두 처리되었을 경우 true 반환.
 	ELEV_EXPORT bool IsFinished();
 
-	ELEV_EXPORT void Temp();
-
 private:
+
+	struct Passenger
+	{
+		int id;	
+		int boardingFloor;	
+		int destinationFloor;	
+		int appearanceTickCount;
+
+		Passenger() 
+			: id(0)
+			, boardingFloor(0)
+			, destinationFloor(0)
+			, appearanceTickCount(0)
+		{};
+	};
+
 	int numElevators_;
 	int maxPassengersPerElevator_;
 	int minFloor_;
@@ -135,6 +131,8 @@ private:
 
 	Passenger* totalPassengers_;
 	std::map<int, Passenger> remainingPassengers_;
+
+	passenger_call_cb passengerCallCb_;
 
 	struct ElevatorOrder {
 		ElevatorEvent event;
@@ -177,7 +175,8 @@ ELEV_EXPORT elev::ElevatorSimulator* CreateElevatorSimulator(
 	int maxPassengersPerElevator,
 	int minFloor,
 	int maxFloor,
-	int numPassengers);
+	int numPassengers,
+	passenger_call_cb passengerCallCallback);
 
 ELEV_EXPORT void DeleteElevatorSimulator(elev::ElevatorSimulator* simulator);
 

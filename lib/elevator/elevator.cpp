@@ -6,13 +6,15 @@ elev::ElevatorSimulator::ElevatorSimulator(
 	int maxPassengersPerElevator, 
 	int minFloor, 
 	int maxFloor,
-	int numPassengers)
+	int numPassengers,
+	passenger_call_cb passengerCallCallback)
 	: numElevators_(numElevators)
 	, maxPassengersPerElevator_(maxPassengersPerElevator)
 	, minFloor_(minFloor)
 	, maxFloor_(maxFloor)
 	, numPassengers_(numPassengers)
 	, tickCount_(0)
+	, passengerCallCb_(passengerCallCallback)
 {
 	printf("Initializing elevator simulator...\n");
 
@@ -34,16 +36,6 @@ elev::ElevatorSimulator::ElevatorSimulator(
 elev::ElevatorSimulator::~ElevatorSimulator()
 {
 	delete[] totalPassengers_;
-}
-
-const elev::Passenger* elev::ElevatorSimulator::GetTotalPassengers()
-{
-	return totalPassengers_;
-}
-
-const std::map<int, elev::Passenger>& elev::ElevatorSimulator::GetRemainingPassengers()
-{
-	return remainingPassengers_;
 }
 
 const elev::Elevator* elev::ElevatorSimulator::GetElevator(int elevatorIndex)
@@ -110,6 +102,16 @@ bool elev::ElevatorSimulator::Tick()
 		}
 	}
 
+	// 새로 발생한 승객 요청 callback
+	for (auto& kv : remainingPassengers_)
+	{
+		auto p = kv.second;
+		if (p.appearanceTickCount == tickCount_)
+		{
+			passengerCallCb_(p.id, p.boardingFloor, p.destinationFloor);
+		}
+	}
+
 	int remaining = remainingPassengers_.size();
 	if (remaining == 0)
 	{
@@ -128,11 +130,6 @@ bool elev::ElevatorSimulator::Tick()
 bool elev::ElevatorSimulator::IsFinished()
 {
 	return remainingPassengers_.size() == 0;
-}
-
-ELEV_EXPORT void elev::ElevatorSimulator::Temp()
-{
-	remainingPassengers_.clear();
 }
 
 void elev::ElevatorSimulator::BuildRandomPassengers()
@@ -166,6 +163,11 @@ void elev::ElevatorSimulator::BuildRandomPassengers()
 		}
 		totalPassengers_[i] = p;
 		remainingPassengers_.insert(std::pair<int, Passenger>(i, p));
+
+		if (p.appearanceTickCount == 0)
+		{
+			passengerCallCb_(p.id, p.boardingFloor, p.destinationFloor);
+		}
 	}
 }
 
@@ -225,12 +227,16 @@ void elev::ElevatorSimulator::HandleEventOpenDoor(
 	elevator.state = ElevatorState::DoorIsOpened;
 
 	// 승객 하차.
-	std::vector<Passenger>::iterator it;
-	for (it = elevator.passengers.begin(); it != elevator.passengers.end();)
+	std::vector<int>::iterator it;
+	for (it = elevator.passengerIds.begin(); it != elevator.passengerIds.end();)
 	{
-		if (it->destinationFloor == elevator.floor)
+		int passengerId = *it;
+		assert(passengerId >= 0 && passengerId < numPassengers_);
+		Passenger p = totalPassengers_[passengerId];		
+		
+		if (p.destinationFloor == elevator.floor)
 		{
-			it = elevator.passengers.erase(it);
+			it = elevator.passengerIds.erase(it);
 		}
 		else
 		{
@@ -246,8 +252,8 @@ void elev::ElevatorSimulator::HandleEventOpenDoor(
 
 		assert(it->second.appearanceTickCount <= tickCount_);
 
-		elevator.passengers.push_back(it->second);
-		assert((int)elevator.passengers.size() <= maxPassengersPerElevator_);
+		elevator.passengerIds.push_back(it->second.id);
+		assert((int)elevator.passengerIds.size() <= maxPassengersPerElevator_);
 
 		remainingPassengers_.erase(it);
 	}
@@ -302,14 +308,16 @@ elev::ElevatorSimulator* CreateElevatorSimulator(
 	int maxPassengersPerElevator,
 	int minFloor,
 	int maxFloor,
-	int numPassengers)
+	int numPassengers,
+	passenger_call_cb passengerCallCallback)
 {
 	return new elev::ElevatorSimulator(
 		numElevators, 
 		maxPassengersPerElevator, 
 		minFloor, 
 		maxFloor, 
-		numPassengers);
+		numPassengers,
+		passengerCallCallback);
 }
 
 void DeleteElevatorSimulator(elev::ElevatorSimulator* simulator)

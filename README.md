@@ -14,28 +14,33 @@
 
 
 ### 승객 요청
-승객 요청은 id, 탑승층, 목적층 그리고 등장 시간 정보를 가지고 있습니다.
+승객 요청은 id, 탑승층, 목적층에 대한 정보를 가지고 있고,
+
+ElevatorSimulator 생성 시 인자로 넘겨준 callback 함수를 통해 얻을 수 있습니다.
+
+승객 요청이 발생되는 시점은 아래와 같습니다.
+1. ElevatorSimulator 가 생성될 때.
+2. 밑에서 설명할 ElevatorSimulator::Tick 함수가 호출될 때.
+
 ```
 // 승객 요청
 struct Passenger
 {
-	int id;	// 승객 id.
-	int boardingFloor;	// 탑층층.
+	int id;	// 승객 요청 id.
+	int boardingFloor;	// 탑승층.
 	int destinationFloor;	// 목적층.
-
-	// 등장 시간. 
-	// Simulator의 tickCount 가 appearanceTickCount 보다 큰 경우에만 
-	// 해당 승객 요청이 유효하다.
-	int appearanceTickCount;	
 };
+std::queue<Passenger> passengers;
+
+// Simulator 생성.
+elev::ElevatorSimulator* elevSimulator = CreateElevatorSimulator(
+	NUM_ELEVATORS, MAX_PASSENGERS_PER_ELEVATOR, MIN_FLOOR, MAX_FLOOR, NUM_PASSENTERS,
+	[&passengers](int id, int boardingFloor, int destinationFloor)
+{
+	// 승객 요청이 발생하면 해당 callback이 호출된다.
+	passengers.push(Passenger{ id, boardingFloor, destinationFloor });
+});
 ```
-
-등장 시간은 tick count 라는 단위를 사용하는데 tick count 는 본 문제에서 시간의 경과를 표현하기 위해 사용되는 개념입니다.
-
-tick count 는 뒤에서 설명될 ElevatorSimulator::Tick 함수가 호출될 때 마다 1씩 증가합니다.
-
-만약 승객 요청의 등장 시간이 10이라면 ElevatorSimulator 의 tickCount 값이
-10 이상일 때 해당 승객의 요청이 유효하다는 의미입니다.
 
 
 
@@ -77,18 +82,23 @@ ElevatorEvent 에 따른 ElevatorState 전환을 표로 나타내면 아래와 �
 
 ElevatorSimulator::Tick 함수를 호출하여 시간을 경과시켜야 됩니다.
 
+이렇게 Tick 함수가 호출되면 tick count 가 1 증가하고 각 엘리베이터는 ElevatorSimulator::Order 를 통해 미리 정의된 행동을 수행하게 됩니다. 
+
+하나의 Tick 에서는 하나의 ElevatorEvent 가 수행되며 tick count 를 통해 시간이 얼만큼 경과되었는지를 알 수 있습니다.
+
 ```
 elev::ElevatorSimulator* elevSimulator = CreateElevatorSimulator(
-	NUM_ELEVATORS, MAX_PASSENGERS_PER_ELEVATOR, MIN_FLOOR, MAX_FLOOR, NUM_PASSENTERS);
+	NUM_ELEVATORS, MAX_PASSENGERS_PER_ELEVATOR, MIN_FLOOR, MAX_FLOOR, NUM_PASSENTERS,
+	[&passengers](int id, int boardingFloor, int destinationFloor)
+{
+	// 승객 요청이 발생하면 해당 callback이 호출된다.
+	passengers.push(Passenger{ id, boardingFloor, destinationFloor });
+});
+
 elevSimulator->Order(0, elev::ElevatorEvent::Stop);
 elevSimulator->Tick();
 ```
 
-ElevatorSimulator::Tick 함수가 호출되면 tickCount 가 1 증가하고 
-
-각 엘리베이터는 ElevatorSimulator::Order 를 통해 미리 정의된 행동을 수행하게 됩니다. 
-
-하나의 Tick 에서는 하나의 ElevatorEvent 가 수행됩니다.
 
 ### 예제
 아래 예제는 가장 무식한 방법으로 구현된 엘리베이터 제어 시스템입니다.
@@ -98,6 +108,7 @@ ElevatorSimulator::Tick 함수가 호출되면 tickCount 가 1 증가하고
 수행 중인 승객 요청이 완료될 때 까지 다른 승객은 신경쓰지 않습니다.
 ```
 #include <iostream>
+#include <queue>
 #include "elevator/elevator.h"
 
 #define NUM_ELEVATORS 3	// 빌딩의 엘리베이터 개수.
@@ -106,24 +117,37 @@ ElevatorSimulator::Tick 함수가 호출되면 tickCount 가 1 증가하고
 #define MAX_FLOOR 30	// 빌딩 최고층.
 #define NUM_PASSENTERS 300	// 승객 수
 
-int main() 
+
+int main()
 {
+	struct Passenger
+	{
+		int id;	// 승객 요청 id.
+		int boardingFloor;	// 탑승층.
+		int destinationFloor;	// 목적층.
+	};
+	std::queue<Passenger> passengers;
+
 	// Simulator 생성.
 	elev::ElevatorSimulator* elevSimulator = CreateElevatorSimulator(
-		NUM_ELEVATORS, MAX_PASSENGERS_PER_ELEVATOR, MIN_FLOOR, MAX_FLOOR, NUM_PASSENTERS);
+		NUM_ELEVATORS, MAX_PASSENGERS_PER_ELEVATOR, MIN_FLOOR, MAX_FLOOR, NUM_PASSENTERS,
+		[&passengers](int id, int boardingFloor, int destinationFloor)
+	{
+		// 승객 요청이 발생하면 해당 callback이 호출된다.
+		passengers.push(Passenger{ id, boardingFloor, destinationFloor });
+	});
 
-	const elev::Passenger* passengers = elevSimulator->GetTotalPassengers();
 	// 본 예제에서는 무식하게 하나의 엘리베이터만 이용한다.
 	const elev::Elevator* elevator0 = elevSimulator->GetElevator(0);
-	for (int i = 0; i < NUM_PASSENTERS; i++)
+	while(!elevSimulator->IsFinished())
 	{
-		const elev::Passenger passenger = passengers[i];
-
-		// 승객 요청이 발생할(유효해질) 때 까지 기다린다.
-		while (passenger.appearanceTickCount > elevSimulator->TickCount() + 1)
+		if (passengers.size() == 0)
 		{
+			continue;
 			elevSimulator->Tick();
 		}
+		const Passenger passenger = passengers.front();
+		passengers.pop();
 
 		// 승객이 탑승할 층으로 이동.
 		while (elevator0->floor != passenger.boardingFloor)
@@ -196,6 +220,8 @@ int main()
 
 	return 0;
 }
+
+
 ```
 
 ### 문제 
