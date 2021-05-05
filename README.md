@@ -1,7 +1,7 @@
 # 엘리베이터 제어 시스템 만들기
 
 한 번쯤 엘리베이터를 기다리며 엘리베이터의 동작을 제어하는 시스템에 대해 
-생각 해보셨을 것입니다.
+생각해 보셨을 것입니다.
 
 본 문제는 엘리베이터를 제어하는 시스템을 구현하여 조금이라도 더 효율적으로 
 승객을 운송하는 것이 목표입니다.
@@ -84,7 +84,7 @@ ElevatorSimulator::Tick 함수를 호출하여 시간을 경과시켜야 됩니�
 
 이렇게 Tick 함수가 호출되면 tick count 가 1 증가하고 각 엘리베이터는 ElevatorSimulator::Order 를 통해 미리 정의된 행동을 수행하게 됩니다. 
 
-하나의 Tick 에서는 하나의 ElevatorEvent 가 수행되며 tick count 를 통해 시간이 얼만큼 경과되었는지를 알 수 있습니다.
+하나의 Tick 에서는 하나의 ElevatorEvent 가 수행되며 tick count 를 통해 시간이 얼마큼 경과되었는지를 알 수 있습니다.
 
 ```
 elev::ElevatorSimulator* elevSimulator = CreateElevatorSimulator(
@@ -112,7 +112,7 @@ elevSimulator->Tick();
 
 3대의 엘리베이터 중 한 대만 이용하고, 한 번에 한 명의 승객 요청만 처리하며
 
-수행 중인 승객 요청이 완료될 때 까지 다른 승객은 신경쓰지 않습니다.
+수행 중인 승객 요청이 완료될 때까지 다른 승객은 신경 쓰지 않습니다.
 
 ```
 #include <iostream>
@@ -237,15 +237,15 @@ int main()
 
 모두 처리할 수 있는 엘리베이터 제어 시스템을 작성해 주시면 됩니다.
 
-설계된 엘리베이터 제어 시스템은 위 예제와 같이 ElevatorSimulator 을 이용해 승객 요청을 모두 처리해주셔야 됩니다.
+작성된 엘리베이터 제어 시스템은 위 예제와 같이 ElevatorSimulator 을 이용해 승객 요청을 모두 처리해 주셔야 됩니다.
 
-필요한 객체를 자유롭게 만들어 모든 헤더 파일과 소스 파일을 제출해주시면 검토 후 연락드리겠습니다. 
+필요한 객체를 자유롭게 만들어 모든 헤더 파일과 소스 파일을 제출해 주시면 검토 후 연락드리겠습니다. 
 
 감사합니다.
 
 
 ### 설치
-ElevatorSimulator는 본 문제 git 저장소의 lib/elevator/elevator.h, elevator.cpp 에 구현되어 있으며
+ElevatorSimulator는 본 문제 git 저장소의 lib/elevator/elevator.h, elevator.cpp 에 되어 있으며
 
 권장하는 설치 방법은 본 문제 git 저장소를 clone 받은 후 Cmake 와 Visual studio 를 이용해 컴파일하시는 것을 추천드립니다.
 
