@@ -1,5 +1,4 @@
 ﻿#include "elevator.h"
-#include <cassert>
 
 elev::ElevatorSimulator::ElevatorSimulator(
 	int numElevators, 
@@ -7,14 +6,14 @@ elev::ElevatorSimulator::ElevatorSimulator(
 	int minFloor, 
 	int maxFloor,
 	int numPassengers,
-	passenger_call_cb passengerCallCallback)
+	new_passenger_cb newPassengerCb)
 	: numElevators_(numElevators)
 	, maxPassengersPerElevator_(maxPassengersPerElevator)
 	, minFloor_(minFloor)
 	, maxFloor_(maxFloor)
 	, numPassengers_(numPassengers)
 	, tickCount_(0)
-	, passengerCallCb_(passengerCallCallback)
+	, newPassengerCb_(newPassengerCb)
 {
 	printf("Initializing elevator simulator...\n");
 
@@ -38,9 +37,10 @@ elev::ElevatorSimulator::~ElevatorSimulator()
 	delete[] totalPassengers_;
 }
 
-const elev::Elevator* elev::ElevatorSimulator::GetElevator(int elevatorIndex)
+const elev::ElevatorSimulator::Elevator* elev::ElevatorSimulator::GetElevator(
+	int elevatorIndex)
 {
-	assert(elevatorIndex >= 0 && elevatorIndex <= numElevators_);
+	ASSERT(elevatorIndex >= 0 && elevatorIndex < numElevators_, "Invalid elevator index");
 	return &elevators_[elevatorIndex];
 }
 
@@ -48,32 +48,33 @@ ELEV_EXPORT void elev::ElevatorSimulator::Order(
 	int elevatorIndex, 
 	ElevatorEvent event, 
 	int destinationFloor, 
-	std::initializer_list<int> boardingPassengerIds)
+	std::vector<int>& boardingPassengerIds)
 {
-	assert(elevatorIndex >= 0 && elevatorIndex <= numElevators_);
+	ASSERT(elevatorIndex >= 0 && elevatorIndex < numElevators_, "Invalid elevator index");
 
 	Elevator elevator = elevators_[elevatorIndex];
 	if (event == ElevatorEvent::Up)
 	{
-		assert(elevator.floor < destinationFloor);
+		ASSERT(elevator.floor < destinationFloor, "Invalid destination floor");
 	}
 	else if (event == ElevatorEvent::Down)
 	{
-		assert(elevator.floor > destinationFloor);
+		ASSERT(elevator.floor > destinationFloor, "Invalid destination floor");
 	}
 
 	ElevatorOrder& order = orders_[elevatorIndex];
 	order.event = event;
 	order.destinationFloor = destinationFloor;
-	order.boardingPassengerIds = std::vector<int>(boardingPassengerIds);
+	order.boardingPassengerIds = boardingPassengerIds;
 }
 
 ELEV_EXPORT void elev::ElevatorSimulator::Order(
 	int elevatorIndex, 
 	ElevatorEvent event, 
-	std::initializer_list<int> boardingPassengerIds)
+	std::vector<int>& boardingPassengerIds)
 {
-	assert(event != ElevatorEvent::Up && event != ElevatorEvent::Down);
+	ASSERT(event != ElevatorEvent::Up && event != ElevatorEvent::Down, 
+		"No destinaton floor");
 	Order(elevatorIndex, event, 0, boardingPassengerIds);
 }
 
@@ -108,7 +109,7 @@ bool elev::ElevatorSimulator::Tick()
 		auto p = kv.second;
 		if (p.appearanceTickCount == tickCount_)
 		{
-			passengerCallCb_(p.id, p.boardingFloor, p.destinationFloor);
+			newPassengerCb_(p.id, p.boardingFloor, p.destinationFloor);
 		}
 	}
 
@@ -166,14 +167,14 @@ void elev::ElevatorSimulator::BuildRandomPassengers()
 
 		if (p.appearanceTickCount == 0)
 		{
-			passengerCallCb_(p.id, p.boardingFloor, p.destinationFloor);
+			newPassengerCb_(p.id, p.boardingFloor, p.destinationFloor);
 		}
 	}
 }
 
 int elev::ElevatorSimulator::RandInt(int min, int max)
 {
-	assert(max > min);
+	ASSERT(max > min, "Max is greater than min");
 	return rand() % (max - min + 1) + min;
 }
 
@@ -196,7 +197,7 @@ void elev::ElevatorSimulator::HandleEvent(
 	ElevatorEvent event, 
 	const std::vector<int>& passengerIds)
 {
-	assert(elevatorIndex >= 0 && elevatorIndex <= numElevators_);
+	ASSERT(elevatorIndex >= 0 && elevatorIndex < numElevators_, "Invalid elevator index");
 
 	switch (event)
 	{
@@ -222,7 +223,7 @@ void elev::ElevatorSimulator::HandleEventOpenDoor(
 	int elevatorIndex, const std::vector<int>& passengerIds)
 {
 	Elevator& elevator = elevators_[elevatorIndex];
-	assert(elevator.state == ElevatorState::Stopped);
+	ASSERT(elevator.state == ElevatorState::Stopped, "Cannot open door unless stopped");
 
 	elevator.state = ElevatorState::DoorIsOpened;
 
@@ -231,7 +232,7 @@ void elev::ElevatorSimulator::HandleEventOpenDoor(
 	for (it = elevator.passengerIds.begin(); it != elevator.passengerIds.end();)
 	{
 		int passengerId = *it;
-		assert(passengerId >= 0 && passengerId < numPassengers_);
+		ASSERT(passengerId >= 0 && passengerId < numPassengers_, "Invalid passenger id");
 		Passenger p = totalPassengers_[passengerId];		
 		
 		if (p.destinationFloor == elevator.floor)
@@ -248,12 +249,13 @@ void elev::ElevatorSimulator::HandleEventOpenDoor(
 	for (int id : passengerIds)
 	{
 		std::map<int, Passenger>::iterator it = remainingPassengers_.find(id);
-		assert(it != remainingPassengers_.end());
+		ASSERT(it != remainingPassengers_.end(), "No passenger");
 
-		assert(it->second.appearanceTickCount <= tickCount_);
+		ASSERT(it->second.appearanceTickCount <= tickCount_, "No passenger");
 
 		elevator.passengerIds.push_back(it->second.id);
-		assert((int)elevator.passengerIds.size() <= maxPassengersPerElevator_);
+		ASSERT((int)elevator.passengerIds.size() <= maxPassengersPerElevator_,
+			"Exceeds elevator capacity");
 
 		remainingPassengers_.erase(it);
 	}
@@ -262,7 +264,7 @@ void elev::ElevatorSimulator::HandleEventOpenDoor(
 void elev::ElevatorSimulator::HandleEventCloseDoor(int elevatorIndex)
 {
 	Elevator& elevator = elevators_[elevatorIndex];
-	assert(elevator.state == ElevatorState::DoorIsOpened);
+	ASSERT(elevator.state == ElevatorState::DoorIsOpened, "Cannot close door");
 
 	elevator.state = ElevatorState::Stopped;
 }
@@ -270,11 +272,11 @@ void elev::ElevatorSimulator::HandleEventCloseDoor(int elevatorIndex)
 void elev::ElevatorSimulator::HandleEventUp(int elevatorIndex)
 {
 	Elevator& elevator = elevators_[elevatorIndex];
-	assert(elevator.state == ElevatorState::MovingUp ||
-		elevator.state == ElevatorState::Stopped);
+	ASSERT(elevator.state == ElevatorState::MovingUp ||
+		elevator.state == ElevatorState::Stopped, "Cannot up");
 
 	elevator.floor++;
-	assert(elevator.floor <= maxFloor_);
+	ASSERT(elevator.floor <= maxFloor_, "Cannot up any more");
 
 	elevator.state = ElevatorState::MovingUp;
 }
@@ -282,11 +284,11 @@ void elev::ElevatorSimulator::HandleEventUp(int elevatorIndex)
 void elev::ElevatorSimulator::HandleEventDown(int elevatorIndex)
 {
 	Elevator& elevator = elevators_[elevatorIndex];
-	assert(elevator.state == ElevatorState::MovingDown ||
-		elevator.state == ElevatorState::Stopped);
+	ASSERT(elevator.state == ElevatorState::MovingDown ||
+		elevator.state == ElevatorState::Stopped, "Cannot down");
 
 	elevator.floor--;
-	assert(elevator.floor >= minFloor_);
+	ASSERT(elevator.floor >= minFloor_, "Cannot down any more");
 
 	elevator.state = ElevatorState::MovingDown;
 }
@@ -294,9 +296,9 @@ void elev::ElevatorSimulator::HandleEventDown(int elevatorIndex)
 void elev::ElevatorSimulator::HandleEventStop(int elevatorIndex)
 {
 	Elevator& elevator = elevators_[elevatorIndex];
-	assert(elevator.state == ElevatorState::MovingUp ||
+	ASSERT(elevator.state == ElevatorState::MovingUp ||
 		elevator.state == ElevatorState::MovingDown ||
-		elevator.state == ElevatorState::Stopped);
+		elevator.state == ElevatorState::Stopped, "Cannot stop");
 
 	elevator.state = ElevatorState::Stopped;
 }
@@ -309,7 +311,7 @@ elev::ElevatorSimulator* CreateElevatorSimulator(
 	int minFloor,
 	int maxFloor,
 	int numPassengers,
-	passenger_call_cb passengerCallCallback)
+	new_passenger_cb newPassengerCb)
 {
 	return new elev::ElevatorSimulator(
 		numElevators, 
@@ -317,7 +319,7 @@ elev::ElevatorSimulator* CreateElevatorSimulator(
 		minFloor, 
 		maxFloor, 
 		numPassengers,
-		passengerCallCallback);
+		newPassengerCb);
 }
 
 void DeleteElevatorSimulator(elev::ElevatorSimulator* simulator)

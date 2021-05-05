@@ -39,7 +39,7 @@ int example()
 	});
 
 	// 본 예제에서는 무식하게 하나의 엘리베이터만 이용한다.
-	const elev::Elevator* elevator0 = elevSimulator->GetElevator(0);
+	const elev::ElevatorSimulator::Elevator* elevator0 = elevSimulator->GetElevator(0);
 	while(!elevSimulator->IsFinished())
 	{
 		if (passengers.size() == 0)
@@ -69,7 +69,8 @@ int example()
 
 		// 문을 열고 승객 한 명만 태운다.
 		{
-			elevSimulator->Order(0, elev::ElevatorEvent::OpenDoor, { passenger.id });
+			std::vector<int> boardingPassengerIds{ passenger.id };
+			elevSimulator->Order(0, elev::ElevatorEvent::OpenDoor, boardingPassengerIds);
 			if (elevSimulator->Tick())
 			{
 				// 완료. 

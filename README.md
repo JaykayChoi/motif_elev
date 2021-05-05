@@ -95,17 +95,25 @@ elev::ElevatorSimulator* elevSimulator = CreateElevatorSimulator(
 	passengers.push(Passenger{ id, boardingFloor, destinationFloor });
 });
 
+// 0번 엘리베이터 정지.
 elevSimulator->Order(0, elev::ElevatorEvent::Stop);
+// 1번 엘리베이터 5층까지 상승.
+elevSimulator->Order(1, elev::ElevatorEvent::Up, 5);
+// 2번 엘리베이터 문 열고 승객 1, 5, 7, 10 (passenger id) 엘리베이터에 승차.
+std::vector<int> boardingPassengerIds{ 1, 5, 7, 10 };
+elevSimulator->Order(2, elev::ElevatorEvent::OpenDoor, boardingPassengerIds);
+
 elevSimulator->Tick();
 ```
 
 
 ### 예제
-아래 예제는 가장 무식한 방법으로 구현된 엘리베이터 제어 시스템입니다.
+아래 예제는 가장 무식한 방법으로 작성된 엘리베이터 제어 시스템입니다.
 
-3대의 엘리베이터 중 한 대만 이용하고, 한 번에 한 명의 승객 요청만 다루며
+3대의 엘리베이터 중 한 대만 이용하고, 한 번에 한 명의 승객 요청만 처리하며
 
 수행 중인 승객 요청이 완료될 때 까지 다른 승객은 신경쓰지 않습니다.
+
 ```
 #include <iostream>
 #include <queue>
@@ -116,7 +124,6 @@ elevSimulator->Tick();
 #define MIN_FLOOR 1	// 빌딩 최저층.
 #define MAX_FLOOR 30	// 빌딩 최고층.
 #define NUM_PASSENTERS 300	// 승객 수
-
 
 int main()
 {
@@ -138,7 +145,7 @@ int main()
 	});
 
 	// 본 예제에서는 무식하게 하나의 엘리베이터만 이용한다.
-	const elev::Elevator* elevator0 = elevSimulator->GetElevator(0);
+	const elev::ElevatorSimulator::Elevator* elevator0 = elevSimulator->GetElevator(0);
 	while(!elevSimulator->IsFinished())
 	{
 		if (passengers.size() == 0)
@@ -168,7 +175,8 @@ int main()
 
 		// 문을 열고 승객 한 명만 태운다.
 		{
-			elevSimulator->Order(0, elev::ElevatorEvent::OpenDoor, { passenger.id });
+			std::vector<int> boardingPassengerIds{ passenger.id };
+			elevSimulator->Order(0, elev::ElevatorEvent::OpenDoor, boardingPassengerIds);
 			if (elevSimulator->Tick())
 			{
 				// 완료. 
@@ -227,7 +235,7 @@ int main()
 ### 문제 
 이제 지원자께서는 객체 지향 원칙에 따라 300명의 승객 요청을 효율적으로 
 
-모두 처리할 수 있는 엘리베이터 제어 시스템을 설계해 주시면 됩니다.
+모두 처리할 수 있는 엘리베이터 제어 시스템을 작성해 주시면 됩니다.
 
 설계된 엘리베이터 제어 시스템은 위 예제와 같이 ElevatorSimulator 을 이용해 승객 요청을 모두 처리해주셔야 됩니다.
 
