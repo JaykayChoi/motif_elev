@@ -89,7 +89,7 @@ public:
 	// Elevator 반환.
 	ELEV_EXPORT const Elevator* GetElevator(int elevatorIndex);
 
-	// TODO rename
+	// TODO rename schedule? reserve?
 	// 엘리베이터에 명령을 내린다. 접수된 명령은 다음 tick 에 수행된다.
 	// 엘리베이터에 이미 접수된 명령이 있을 경우 덮어써진다.
 	// @param elevatorIndex elevator index. 
