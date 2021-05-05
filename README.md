@@ -77,7 +77,7 @@ ElevatorEvent 에 따른 ElevatorState 전환을 표로 나타내면 아래와 �
 ![fsmflowchart](https://drive.google.com/uc?id=1OVpT9g5YPowVin_YvfARVe82ICEY0zps)
 
 
-# Order, Tick
+### Order, Tick
 엘리베이터에 ElevatorEvent 를 발생시키기 위해서는 ElevatorSimulator::Order 함수를 호출하여 각 엘리베이터의 행동을 정한 후
 
 ElevatorSimulator::Tick 함수를 호출하여 시간을 경과시켜야 됩니다.
