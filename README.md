@@ -106,7 +106,7 @@ elevSimulator->Order(2, elev::ElevatorEvent::OpenDoor, boardingPassengerIds);
 elevSimulator->Tick();
 ```
 
-### 엘리베이터 정보 얻기.
+### 엘리베이터 정보 얻기
 엘리베이터는 최초 생성 시 빌딩 최저층(1층)에 위치하고 정지해(ElevatorState::Stopped) 있습니다.
 
 이후 변경되는 엘리베이터의 정보는 직접 작성하신 엘리베이터 제어 시스템에서 얻으실 수 있을 것입니다.
