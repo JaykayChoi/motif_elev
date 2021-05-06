@@ -326,7 +326,7 @@ int main()
 
 
 ### 설치
-ElevatorSimulator는 본 문제 git 저장소의 lib/elevator/elevator.h, elevator.cpp 에 되어 있으며
+ElevatorSimulator는 본 문제 git 저장소의 lib/elevator/elevator.h, elevator.cpp 에 작성 되어 있으며 편하신 방법으로 include 하여 사용하시면 됩니다.
 
 권장하는 설치 방법은 본 문제 git 저장소를 clone 받은 후 Cmake 와 Visual studio 를 이용해 컴파일하시는 것을 추천드립니다.
 
