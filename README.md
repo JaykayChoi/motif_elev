@@ -127,7 +127,7 @@ const std::vector<int>& GetElevatorPassengers(int elevatorIndex);
 
 Callback 함수는 엘리베이터가 생성되는 시점과 ElevatorSimulator::Tick 함수가 호출될 때 호출될 수 있습니다.
 
-참고로 ElevatorSimulator 생성 시 필요하지 않을 경우 해당 callback 인자는 전달하지 않아도 됩니다. (default argument)
+참고로 ElevatorSimulator 생성 시 필요하지 않을 경우 해당 callback 인자는 전달하지 않아도 됩니다. (optional parameter)
 ```
 struct Passenger
 {
