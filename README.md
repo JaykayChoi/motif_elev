@@ -16,7 +16,7 @@
 ### 승객 요청
 승객 요청은 id, 탑승층, 목적층에 대한 정보를 가지고 있고,
 
-ElevatorSimulator 생성 시 인자로 넘겨준 callback 함수를 통해 얻을 수 있습니다.
+ElevatorSimulator 생성 시 인자로 전달한 callback 함수를 통해 얻을 수 있습니다.
 
 승객 요청이 발생되는 시점은 아래와 같습니다.
 1. ElevatorSimulator 가 생성될 때.
@@ -106,6 +106,66 @@ elevSimulator->Order(2, elev::ElevatorEvent::OpenDoor, boardingPassengerIds);
 elevSimulator->Tick();
 ```
 
+### 엘리베이터 정보 얻기.
+엘리베이터는 최초 생성 시 빌딩 최저층(1층)에 위치하고 정지해(ElevatorState::Stopped) 있습니다.
+
+이후 변경되는 엘리베이터의 정보는 직접 작성하신 엘리베이터 제어 시스템에서 얻으실 수 있을 것입니다.
+
+하지만 필요하실 경우 Simulator 에서도 두 가지 방법으로 엘리베이터 정보를 얻을 수 있습니다.
+
+첫 번째 방법은 ElevatorSimulator 의 get 함수를 이용하는 방법입니다.
+```
+// 엘리베이터의 현재 위치(층) 반환.
+int GetElevatorFloor(int elevatorIndex);
+// 엘리베이터 현재 상태 반환.
+ElevatorState GetElevatorState(int elevatorIndex);
+// 엘리베이터에 현재 탑승한 승객 반환.
+const std::vector<int>& GetElevatorPassengers(int elevatorIndex);
+```
+
+두 번째로 승객 요청을 얻는 것과 같은 방법으로 ElevatorSimulator 생성 시 전달한 callback 함수를 통해 얻을 수도 있습니다. 
+
+Callback 함수는 엘리베이터가 생성되는 시점과 ElevatorSimulator::Tick 함수가 호출될 때 호출될 수 있습니다.
+```
+struct Passenger
+{
+	int id;	// 승객 요청 id.
+	int boardingFloor;	// 탑승층.
+	int destinationFloor;	// 목적층.
+};
+
+struct Elevator
+{
+	int floor;	// 현재 위치(층).
+	elev::ElevatorState state;	// 현재 상태.
+	std::vector<int> passsengers;	// 탑승 승객.
+};
+
+std::queue<Passenger> passengers;
+
+Elevator elevator0 { MIN_FLOOR, elev::ElevatorState::Stopped, std::vector<int>() };
+
+// Simulator 생성.
+elev::ElevatorSimulator* elevSimulator = CreateElevatorSimulator(
+	NUM_ELEVATORS, MAX_PASSENGERS_PER_ELEVATOR, MIN_FLOOR, MAX_FLOOR, NUM_PASSENTERS,
+	[&passengers](int id, int boardingFloor, int destinationFloor)
+{
+	// 승객 요청이 발생하면 해당 callback이 호출된다.
+	passengers.push(Passenger{ id, boardingFloor, destinationFloor });
+},
+	[&elevator0](int elevatorIndex, int floor, int state, const std::vector<int>& passengers)
+{
+	// 엘리베이터 상태가 변경되면 해당 callback이 호출된다.
+	if (elevatorIndex == 0)
+	{
+		elevator0.floor = floor;
+		elevator0.state = static_cast<elev::ElevatorState>(state);
+		elevator0.passsengers = passengers;
+	}
+}
+);
+```
+
 
 ### 예제
 아래 예제는 가장 무식한 방법으로 작성된 엘리베이터 제어 시스템입니다.
@@ -133,7 +193,18 @@ int main()
 		int boardingFloor;	// 탑승층.
 		int destinationFloor;	// 목적층.
 	};
+
+	struct Elevator
+	{
+		int floor;	// 현재 위치(층).
+		elev::ElevatorState state;	// 현재 상태.
+		std::vector<int> passsengers;	// 탑승 승객.
+	};
+
 	std::queue<Passenger> passengers;
+
+	// 본 예제에서는 무식하게 하나의 엘리베이터만 이용한다.
+	Elevator elevator0 { MIN_FLOOR, elev::ElevatorState::Stopped, std::vector<int>() };
 
 	// Simulator 생성.
 	elev::ElevatorSimulator* elevSimulator = CreateElevatorSimulator(
@@ -142,11 +213,20 @@ int main()
 	{
 		// 승객 요청이 발생하면 해당 callback이 호출된다.
 		passengers.push(Passenger{ id, boardingFloor, destinationFloor });
-	});
+	},
+		[&elevator0](int elevatorIndex, int floor, int state, const std::vector<int>& passengers)
+	{
+		// 엘리베이터 상태가 변경되면 해당 callback이 호출된다.
+		if (elevatorIndex == 0)
+		{
+			elevator0.floor = floor;
+			elevator0.state = static_cast<elev::ElevatorState>(state);
+			elevator0.passsengers = passengers;
+		}
+	}
+	);
 
-	// 본 예제에서는 무식하게 하나의 엘리베이터만 이용한다.
-	const elev::ElevatorSimulator::Elevator* elevator0 = elevSimulator->GetElevator(0);
-	while(!elevSimulator->IsFinished())
+	while (!elevSimulator->IsFinished())
 	{
 		if (passengers.size() == 0)
 		{
@@ -157,9 +237,9 @@ int main()
 		passengers.pop();
 
 		// 승객이 탑승할 층으로 이동.
-		while (elevator0->floor != passenger.boardingFloor)
+		while (elevator0.floor != passenger.boardingFloor)
 		{
-			elev::ElevatorEvent event = elevator0->floor < passenger.boardingFloor ?
+			elev::ElevatorEvent event = elevator0.floor < passenger.boardingFloor ?
 				elev::ElevatorEvent::Up : elev::ElevatorEvent::Down;
 
 			elevSimulator->Order(0, event, passenger.boardingFloor);
@@ -167,7 +247,7 @@ int main()
 		}
 
 		// 정지시킨다.
-		if (elevator0->state != elev::ElevatorState::Stopped)
+		if (elevator0.state != elev::ElevatorState::Stopped)
 		{
 			elevSimulator->Order(0, elev::ElevatorEvent::Stop);
 			elevSimulator->Tick();
@@ -179,7 +259,7 @@ int main()
 			elevSimulator->Order(0, elev::ElevatorEvent::OpenDoor, boardingPassengerIds);
 			if (elevSimulator->Tick())
 			{
-				// 완료. 
+				// 완료.
 
 				// // Simulator 삭제.
 				DeleteElevatorSimulator(elevSimulator);
@@ -194,9 +274,9 @@ int main()
 		}
 
 		// 목적층까지 이동.
-		while (elevator0->floor != passenger.destinationFloor)
+		while (elevator0.floor != passenger.destinationFloor)
 		{
-			elev::ElevatorEvent event = elevator0->floor < passenger.destinationFloor ?
+			elev::ElevatorEvent event = elevator0.floor < passenger.destinationFloor ?
 				elev::ElevatorEvent::Up : elev::ElevatorEvent::Down;
 
 			elevSimulator->Order(0, event, passenger.destinationFloor);
@@ -228,7 +308,6 @@ int main()
 
 	return 0;
 }
-
 
 ```
 

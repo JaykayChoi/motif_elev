@@ -6,7 +6,8 @@ elev::ElevatorSimulator::ElevatorSimulator(
 	int minFloor, 
 	int maxFloor,
 	int numPassengers,
-	new_passenger_cb newPassengerCb)
+	new_passenger_cb newPassengerCb,
+	elevator_transition_cb elevatorTransitionCb)
 	: numElevators_(numElevators)
 	, maxPassengersPerElevator_(maxPassengersPerElevator)
 	, minFloor_(minFloor)
@@ -14,6 +15,7 @@ elev::ElevatorSimulator::ElevatorSimulator(
 	, numPassengers_(numPassengers)
 	, tickCount_(0)
 	, newPassengerCb_(newPassengerCb)
+	, elevatorTransitionCb_(elevatorTransitionCb)
 {
 	printf("Initializing elevator simulator...\n");
 
@@ -21,8 +23,15 @@ elev::ElevatorSimulator::ElevatorSimulator(
 
 	for (int i = 0; i < numElevators_; i++)
 	{
-		elevators_.push_back(Elevator(minFloor_));
+		Elevator elevator(minFloor_);
+		elevators_.push_back(elevator);
 		orders_.push_back(ElevatorOrder(minFloor_));
+
+		elevatorTransitionCb_(
+			i,
+			elevator.floor,
+			static_cast<int>(elevator.state),
+			elevator.passengerIds);
 	}
 
 	printf("Elevator simulator is initialized. "\
@@ -37,14 +46,25 @@ elev::ElevatorSimulator::~ElevatorSimulator()
 	delete[] totalPassengers_;
 }
 
-const elev::ElevatorSimulator::Elevator* elev::ElevatorSimulator::GetElevator(
-	int elevatorIndex)
+int elev::ElevatorSimulator::GetElevatorFloor(int elevatorIndex)
 {
 	ASSERT(elevatorIndex >= 0 && elevatorIndex < numElevators_, "Invalid elevator index");
-	return &elevators_[elevatorIndex];
+	return elevators_[elevatorIndex].floor;
 }
 
-ELEV_EXPORT void elev::ElevatorSimulator::Order(
+elev::ElevatorState elev::ElevatorSimulator::GetElevatorState(int elevatorIndex)
+{
+	ASSERT(elevatorIndex >= 0 && elevatorIndex < numElevators_, "Invalid elevator index");
+	return elevators_[elevatorIndex].state;
+}
+
+const std::vector<int>& elev::ElevatorSimulator::GetElevatorPassengers(int elevatorIndex)
+{
+	ASSERT(elevatorIndex >= 0 && elevatorIndex < numElevators_, "Invalid elevator index");
+	return elevators_[elevatorIndex].passengerIds;
+}
+
+void elev::ElevatorSimulator::Order(
 	int elevatorIndex, 
 	ElevatorEvent event, 
 	int destinationFloor, 
@@ -68,7 +88,7 @@ ELEV_EXPORT void elev::ElevatorSimulator::Order(
 	order.boardingPassengerIds = boardingPassengerIds;
 }
 
-ELEV_EXPORT void elev::ElevatorSimulator::Order(
+void elev::ElevatorSimulator::Order(
 	int elevatorIndex, 
 	ElevatorEvent event, 
 	std::vector<int>& boardingPassengerIds)
@@ -217,6 +237,13 @@ void elev::ElevatorSimulator::HandleEvent(
 		HandleEventStop(elevatorIndex);
 		break;
 	}
+
+	Elevator& elevator = elevators_[elevatorIndex];
+	elevatorTransitionCb_(
+		elevatorIndex,
+		elevator.floor,
+		static_cast<int>(elevator.state),
+		elevator.passengerIds);
 }
 
 void elev::ElevatorSimulator::HandleEventOpenDoor(
@@ -311,7 +338,8 @@ elev::ElevatorSimulator* CreateElevatorSimulator(
 	int minFloor,
 	int maxFloor,
 	int numPassengers,
-	new_passenger_cb newPassengerCb)
+	new_passenger_cb newPassengerCb,
+	elevator_transition_cb elevatorTransitionCb)
 {
 	return new elev::ElevatorSimulator(
 		numElevators, 
@@ -319,7 +347,8 @@ elev::ElevatorSimulator* CreateElevatorSimulator(
 		minFloor, 
 		maxFloor, 
 		numPassengers,
-		newPassengerCb);
+		newPassengerCb,
+		elevatorTransitionCb);
 }
 
 void DeleteElevatorSimulator(elev::ElevatorSimulator* simulator)

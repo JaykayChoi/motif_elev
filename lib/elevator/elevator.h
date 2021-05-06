@@ -24,6 +24,12 @@ typedef std::function<void(
 	int /* boardingFloor */,
 	int /* destinationFloor */)> new_passenger_cb;
 
+typedef std::function<void(
+	int /* elevatorIndex */,
+	int /* floor */,
+	int /* state */,
+	const std::vector<int>& /* passengerIds */)> elevator_transition_cb;
+
 namespace elev {
 
 enum class ElevatorState
@@ -58,17 +64,6 @@ enum class ElevatorEvent
 class ElevatorSimulator
 {
 public:
-	struct Elevator
-	{
-		int floor;	// 현재 위치한 층.
-		std::vector<int> passengerIds;	// 탑승하고 있는 승객들 id.
-		ElevatorState state;	// 엘리베이터 상태.
-
-		Elevator(int defaultFloor)
-			: floor(defaultFloor)
-			, state(ElevatorState::Stopped)
-		{};
-	};
 
 	// @parma numElevators 빌딩의 엘리베이터 개수.
 	// @parma maxPassengersPerElevator 엘리베이터 하나의 최대 승객 수.
@@ -76,18 +71,24 @@ public:
 	// @parma maxFloor 빌딩 최고층.
 	// @parma numPassengers 시뮬레이터 총 승객 수.
 	// @parma newPassengerCb 새로운 승객 요청이 발생할 경우 호출되는 callback 함수.
+	// @parma elevatorTransitionCb 엘리베이터 상태가 변경될 경우 호출되는 callback 함수.
 	ElevatorSimulator(
 		int numElevators, 
 		int maxPassengersPerElevator, 
 		int minFloor, 
 		int maxFloor,
 		int numPassengers,
-		new_passenger_cb newPassengerCb);
+		new_passenger_cb newPassengerCb,
+		elevator_transition_cb elevatorTransitionCb);
 
 	~ElevatorSimulator();
 
-	// Elevator 반환.
-	ELEV_EXPORT const Elevator* GetElevator(int elevatorIndex);
+	// 엘리베이터의 현재 위치(층) 반환.
+	ELEV_EXPORT int GetElevatorFloor(int elevatorIndex);
+	// 엘리베이터 현재 상태 반환.
+	ELEV_EXPORT ElevatorState GetElevatorState(int elevatorIndex);
+	// 엘리베이터에 현재 탑승한 승객 반환.
+	ELEV_EXPORT const std::vector<int>& GetElevatorPassengers(int elevatorIndex);
 
 	// TODO rename schedule? reserve?
 	// 엘리베이터에 명령을 내린다. 접수된 명령은 다음 tick 에 수행된다.
@@ -133,6 +134,18 @@ private:
 		{};
 	};
 
+	struct Elevator
+	{
+		int floor;	
+		std::vector<int> passengerIds;	
+		ElevatorState state;	
+
+		Elevator(int defaultFloor)
+			: floor(defaultFloor)
+			, state(ElevatorState::Stopped)
+		{};
+	};
+
 	int numElevators_;
 	int maxPassengersPerElevator_;
 	int minFloor_;
@@ -147,6 +160,7 @@ private:
 	std::map<int, Passenger> remainingPassengers_;
 
 	new_passenger_cb newPassengerCb_;
+	elevator_transition_cb elevatorTransitionCb_;
 
 	struct ElevatorOrder {
 		ElevatorEvent event;
@@ -191,13 +205,15 @@ private:
 // @parma maxFloor 빌딩 최고층.
 // @parma numPassengers 시뮬레이터 총 승객 수.
 // @parma newPassengerCb 새로운 승객 요청이 발생할 경우 호출되는 callback 함수.
+// @parma elevatorTransitionCb 엘리베이터 상태가 변경될 경우 호출되는 callback 함수.
 ELEV_EXPORT elev::ElevatorSimulator* CreateElevatorSimulator(
 	int numElevators,
 	int maxPassengersPerElevator,
 	int minFloor,
 	int maxFloor,
 	int numPassengers,
-	new_passenger_cb passengerCallCallback);
+	new_passenger_cb passengerCallCallback,
+	elevator_transition_cb elevatorTransitionCb = nullptr);
 
 ELEV_EXPORT void DeleteElevatorSimulator(elev::ElevatorSimulator* simulator);
 
