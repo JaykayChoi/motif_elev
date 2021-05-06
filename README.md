@@ -74,7 +74,7 @@ enum class ElevatorEvent
 
 ElevatorEvent 에 따른 ElevatorState 전환을 표로 나타내면 아래와 같습니다.
 
-![fsmflowchart](https://drive.google.com/uc?id=1OVpT9g5YPowVin_YvfARVe82ICEY0zps)
+![fsmflowchart](./fsmflowchart.PNG)
 
 
 ### Order, Tick
@@ -126,6 +126,8 @@ const std::vector<int>& GetElevatorPassengers(int elevatorIndex);
 두 번째로 승객 요청을 얻는 것과 같은 방법으로 ElevatorSimulator 생성 시 전달한 callback 함수를 통해 얻을 수도 있습니다. 
 
 Callback 함수는 엘리베이터가 생성되는 시점과 ElevatorSimulator::Tick 함수가 호출될 때 호출될 수 있습니다.
+
+참고로 ElevatorSimulator 생성 시 필요하지 않을 경우 해당 callback 인자는 전달하지 않아도 됩니다. (default argument)
 ```
 struct Passenger
 {
