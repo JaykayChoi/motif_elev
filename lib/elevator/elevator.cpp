@@ -27,11 +27,14 @@ elev::ElevatorSimulator::ElevatorSimulator(
 		elevators_.push_back(elevator);
 		orders_.push_back(ElevatorOrder(minFloor_));
 
-		elevatorTransitionCb_(
-			i,
-			elevator.floor,
-			static_cast<int>(elevator.state),
-			elevator.passengerIds);
+		if (elevatorTransitionCb_)
+		{
+			elevatorTransitionCb_(
+				i,
+				elevator.floor,
+				static_cast<int>(elevator.state),
+				elevator.passengerIds);
+		}
 	}
 
 	printf("Elevator simulator is initialized. "\
@@ -238,12 +241,15 @@ void elev::ElevatorSimulator::HandleEvent(
 		break;
 	}
 
-	Elevator& elevator = elevators_[elevatorIndex];
-	elevatorTransitionCb_(
-		elevatorIndex,
-		elevator.floor,
-		static_cast<int>(elevator.state),
-		elevator.passengerIds);
+	if (elevatorTransitionCb_)
+	{
+		Elevator& elevator = elevators_[elevatorIndex];
+		elevatorTransitionCb_(
+			elevatorIndex,
+			elevator.floor,
+			static_cast<int>(elevator.state),
+			elevator.passengerIds);
+	}
 }
 
 void elev::ElevatorSimulator::HandleEventOpenDoor(
